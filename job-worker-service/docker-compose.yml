@@ -1,0 +1,61 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: jobworker
+      POSTGRES_PASSWORD: jobworker
+      POSTGRES_DB: jobworker
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    networks:
+      - backend
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - backend
+
+  app:
+    build: .
+    environment:
+      HTTP_ADDR: ":8080"
+      POSTGRES_DSN: "postgres://jobworker:jobworker@postgres:5432/jobworker?sslmode=disable"
+      REDIS_ADDR: "redis:6379"
+      REDIS_QUEUE_KEY: "jobs:queue"
+      REDIS_PROCESSING_MAP_KEY: "jobs:processing:map"
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8080:8080"
+    networks:
+      - backend
+
+
+  worker:
+    build: .
+    command: [ "/app/worker" ]
+    environment:
+      POSTGRES_DSN: "postgres://jobworker:jobworker@postgres:5432/jobworker?sslmode=disable"
+      REDIS_ADDR: "redis:6379"
+      REDIS_QUEUE_KEY: "jobs:queue"
+      REDIS_PROCESSING_MAP_KEY: "jobs:processing:map"
+      WORKERS: "4"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - backend
+
+
+volumes:
+  pgdata:
+
+networks:
+  backend:
+    driver: bridge

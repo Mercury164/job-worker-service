@@ -1,0 +1,154 @@
+basePath: /
+definitions:
+  internal_transport_http.apiError:
+    properties:
+      message:
+        type: string
+    type: object
+  internal_transport_http.createJobDTO:
+    properties:
+      input:
+        additionalProperties: true
+        type: object
+      priority:
+        description: 0=low,1=normal,2=high (nil => default 1)
+        type: integer
+      type:
+        type: string
+    type: object
+  internal_transport_http.createJobResp:
+    properties:
+      id:
+        type: string
+    type: object
+  internal_transport_http.jobResp:
+    properties:
+      created_at:
+        type: string
+      error:
+        type: string
+      id:
+        type: string
+      input:
+        additionalProperties: true
+        type: object
+      output:
+        additionalProperties: true
+        type: object
+      priority:
+        type: integer
+      status:
+        $ref: '#/definitions/job-worker-service_internal_entity.JobStatus'
+      type:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  job-worker-service_internal_entity.JobStatus:
+    enum:
+    - pending
+    - processing
+    - done
+    - error
+    type: string
+    x-enum-varnames:
+    - StatusPending
+    - StatusProcessing
+    - StatusDone
+    - StatusError
+info:
+  contact: {}
+  description: Async Job Worker microservice (API + worker via Redis + PostgreSQL)
+  title: Job Worker Service
+  version: "1.0"
+paths:
+  /jobs:
+    post:
+      consumes:
+      - application/json
+      description: Creates job in DB (pending) and enqueues it for background processing.
+      parameters:
+      - description: 'job payload (priority: 0=low,1=normal,2=high)'
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_transport_http.createJobDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_transport_http.createJobResp'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_transport_http.apiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_transport_http.apiError'
+      summary: Create a new job
+      tags:
+      - jobs
+  /jobs/{id}:
+    get:
+      parameters:
+      - description: job id (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_transport_http.jobResp'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_transport_http.apiError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_transport_http.apiError'
+      summary: Get job by id
+      tags:
+      - jobs
+  /jobs/{id}/result:
+    get:
+      parameters:
+      - description: job id (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_transport_http.apiError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_transport_http.apiError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_transport_http.apiError'
+      summary: Get job result
+      tags:
+      - jobs
+schemes:
+- http
+swagger: "2.0"

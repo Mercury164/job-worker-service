@@ -1,0 +1,231 @@
+{
+    "schemes": [
+        "http"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "Async Job Worker microservice (API + worker via Redis + PostgreSQL)",
+        "title": "Job Worker Service",
+        "contact": {},
+        "version": "1.0"
+    },
+    "basePath": "/",
+    "paths": {
+        "/jobs": {
+            "post": {
+                "description": "Creates job in DB (pending) and enqueues it for background processing.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "jobs"
+                ],
+                "summary": "Create a new job",
+                "parameters": [
+                    {
+                        "description": "job payload (priority: 0=low,1=normal,2=high)",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_transport_http.createJobDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/internal_transport_http.createJobResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_transport_http.apiError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_transport_http.apiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/jobs/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "jobs"
+                ],
+                "summary": "Get job by id",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "job id (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_transport_http.jobResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_transport_http.apiError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_transport_http.apiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/jobs/{id}/result": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "jobs"
+                ],
+                "summary": "Get job result",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "job id (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_transport_http.apiError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_transport_http.apiError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/internal_transport_http.apiError"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "internal_transport_http.apiError": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_transport_http.createJobDTO": {
+            "type": "object",
+            "properties": {
+                "input": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "priority": {
+                    "description": "0=low,1=normal,2=high (nil =\u003e default 1)",
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_transport_http.createJobResp": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_transport_http.jobResp": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "input": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "output": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "priority": {
+                    "type": "integer"
+                },
+                "status": {
+                    "$ref": "#/definitions/job-worker-service_internal_entity.JobStatus"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "job-worker-service_internal_entity.JobStatus": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "processing",
+                "done",
+                "error"
+            ],
+            "x-enum-varnames": [
+                "StatusPending",
+                "StatusProcessing",
+                "StatusDone",
+                "StatusError"
+            ]
+        }
+    }
+}
